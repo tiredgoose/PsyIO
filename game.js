@@ -181,7 +181,11 @@
       const top = stack.cards[0];
       const justFlipped = anim.index === i && anim.type === "correct";
       pile.appendChild(cardEl(top, justFlipped ? "flip-in" : ""));
-      if (justFlipped) pile.appendChild(cardEl(anim.leaving, "leaving"));
+      if (justFlipped) {
+        const gone = cardEl(anim.leaving, "leaving");
+        gone.addEventListener("animationend", () => gone.remove());
+        pile.appendChild(gone);
+      }
 
       if (anim.index === i && anim.type === "wrong") {
         const rev = document.createElement("div");

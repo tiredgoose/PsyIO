@@ -77,6 +77,7 @@ main { width: 100%; max-width: 640px; position: relative; }
 /* face-down cards peeking out underneath to show stack depth */
 .pile .under {
   position: absolute;
+  pointer-events: none;
   inset: 0;
   border-radius: var(--radius);
   background: repeating-linear-gradient(45deg, var(--back) 0 6px, var(--back-2) 6px 12px);
@@ -112,6 +113,8 @@ main { width: 100%; max-width: 640px; position: relative; }
 
 .card.flip-in { animation: flipIn 0.35s ease; }
 .card.leaving { animation: leave 0.35s ease forwards; z-index: 2; }
+/* purely visual layers must never swallow clicks meant for nearby buttons */
+.card.leaving, .reveal, .count, .pile::after { pointer-events: none; }
 
 .count {
   position: absolute;

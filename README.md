@@ -18,6 +18,16 @@ A shuffled 52-card deck is dealt into a 3×3 grid of stacks, with the top card o
 | Stack cleared | +25 |
 | All nine stacks cleared | +250 |
 
+### Global scoreboard (optional)
+The game can keep an all-time top 10 in a free [Supabase](https://supabase.com) database. Without it, the game still works and only keeps your personal best in your browser.
+
+1. Create a free Supabase account and a new project.
+2. In the project, open **SQL Editor → New query**, paste the contents of [`supabase/schema.sql`](supabase/schema.sql), and click **Run**.
+3. Open **Project Settings → API** (or **Connect**) and copy the **Project URL** and the **anon public** key.
+4. Paste both into [`config.js`](config.js) and commit.
+
+The anon key is designed to be public. The database only lets it read the board and add new scores: it can't edit or delete entries, and it rejects impossible scores. A determined player could still submit a fake score that's within the possible range; if that happens, delete the row in Supabase's **Table Editor**.
+
 ### Run locally
 Open `index.html` in a browser. No build step or dependencies are needed.
 

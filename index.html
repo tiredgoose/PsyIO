@@ -27,6 +27,12 @@
       <button id="new-game" class="btn primary">New game</button>
       <button id="rules-btn" class="btn">How to play</button>
     </div>
+
+    <section id="board" class="board" hidden>
+      <h2>Global top 10</h2>
+      <ol id="board-list"></ol>
+      <p id="board-status" class="board-status"></p>
+    </section>
   </main>
 
   <dialog id="rules">
@@ -53,12 +59,21 @@
   <dialog id="gameover">
     <h2 id="go-title">Game over</h2>
     <div id="go-body"></div>
+    <form id="submit-form" class="submit" hidden>
+      <label for="player-name">Add your score to the global board</label>
+      <div class="row">
+        <input id="player-name" name="name" maxlength="12" required autocomplete="nickname" placeholder="Your name" />
+        <button id="submit-btn" class="btn primary" type="submit">Submit</button>
+      </div>
+      <p id="submit-status" class="submit-status" aria-live="polite"></p>
+    </form>
     <form method="dialog" class="row">
       <button class="btn" value="close">View board</button>
       <button class="btn primary" value="new">Play again</button>
     </form>
   </dialog>
 
+  <script src="config.js"></script>
   <script src="game.js"></script>
 </body>
 </html>

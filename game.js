@@ -17,6 +17,8 @@
   const STACK_CLEAR_BONUS = 25;
   const PERFECT_BONUS = 250;
   const BEST_KEY = "psyio.ninestacks.best";
+  const NAME_KEY = "psyio.ninestacks.name";
+  const BOARD_SIZE = 10;
 
   const $ = (id) => document.getElementById(id);
   const gridEl = $("grid");
@@ -52,6 +54,7 @@
       streak: 0,
       bestStreak: 0,
       over: false,
+      submitted: false,
     };
     render();
     updateStats();
@@ -136,6 +139,7 @@
           ${cleared === STACK_COUNT ? `<span>Perfect bonus</span><span>+${PERFECT_BONUS}</span>` : ""}
         </div>
         ${isBest ? `<p class="new-best">New best score!</p>` : `<p>Best: ${prevBest}</p>`}`;
+      prepareSubmitForm();
       $("gameover").returnValue = "";
       $("gameover").showModal();
     }, delay);
@@ -181,7 +185,11 @@
       const top = stack.cards[0];
       const justFlipped = anim.index === i && anim.type === "correct";
       pile.appendChild(cardEl(top, justFlipped ? "flip-in" : ""));
-      if (justFlipped) pile.appendChild(cardEl(anim.leaving, "leaving"));
+      if (justFlipped) {
+        const gone = cardEl(anim.leaving, "leaving");
+        gone.addEventListener("animationend", () => gone.remove());
+        pile.appendChild(gone);
+      }
 
       if (anim.index === i && anim.type === "wrong") {
         const rev = document.createElement("div");
@@ -268,6 +276,122 @@
     } catch {
       /* storage unavailable; ignore */
     }
+  }
+
+  // ---------- global scoreboard (Supabase REST, optional) ----------
+
+  const cfg = window.PSYIO_CONFIG || {};
+  const boardEnabled = Boolean(cfg.supabaseUrl && cfg.supabaseAnonKey);
+  const scoresUrl = boardEnabled ? `${cfg.supabaseUrl.replace(/\/+$/, "")}/rest/v1/scores` : "";
+  let lastSubmitted = null;
+
+  function api(path, options = {}) {
+    return fetch(scoresUrl + path, {
+      ...options,
+      headers: {
+        apikey: cfg.supabaseAnonKey,
+        // Legacy anon keys are JWTs and also go in Authorization; new
+        // sb_publishable_ keys are not JWTs and must only use the apikey header.
+        ...(cfg.supabaseAnonKey.startsWith("sb_") ? {} : { Authorization: `Bearer ${cfg.supabaseAnonKey}` }),
+        "Content-Type": "application/json",
+        ...(options.headers || {}),
+      },
+    }).then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.status === 204 || res.status === 201 ? null : res.json();
+    });
+  }
+
+  async function loadBoard() {
+    if (!boardEnabled) return;
+    const list = $("board-list");
+    const status = $("board-status");
+    try {
+      const rows = await api(`?select=name,score,correct&order=score.desc,created_at.asc&limit=${BOARD_SIZE}`);
+      list.innerHTML = "";
+      let highlighted = false;
+      rows.forEach((row) => {
+        const li = document.createElement("li");
+        const name = document.createElement("span");
+        name.className = "name";
+        name.textContent = row.name; // textContent: names are untrusted input
+        const pts = document.createElement("span");
+        pts.className = "pts";
+        pts.textContent = row.score;
+        pts.title = `${row.correct} correct`;
+        li.append(name, pts);
+        if (!highlighted && lastSubmitted && row.name === lastSubmitted.name && row.score === lastSubmitted.score) {
+          li.classList.add("mine");
+          highlighted = true;
+        }
+        list.appendChild(li);
+      });
+      status.textContent = rows.length ? "" : "No scores yet. Be the first!";
+    } catch {
+      status.textContent = "Couldn't load the scoreboard.";
+    }
+  }
+
+  function cleanName(raw) {
+    // Array.from counts characters (not UTF-16 units), matching Postgres char_length.
+    return Array.from(raw.replace(/\s+/g, " ").trim()).slice(0, 12).join("").trim();
+  }
+
+  function prepareSubmitForm() {
+    const form = $("submit-form");
+    const show = boardEnabled && state.score > 0 && !state.submitted;
+    form.hidden = !show;
+    if (!show) return;
+    $("submit-status").textContent = "";
+    $("submit-status").className = "submit-status";
+    $("submit-btn").disabled = false;
+    $("player-name").disabled = false;
+    try {
+      $("player-name").value = localStorage.getItem(NAME_KEY) || "";
+    } catch {
+      /* storage unavailable; ignore */
+    }
+  }
+
+  async function submitScore(e) {
+    e.preventDefault();
+    if (!boardEnabled || state.submitted) return;
+    const name = cleanName($("player-name").value);
+    const status = $("submit-status");
+    if (!name) {
+      status.textContent = "Enter a name first.";
+      status.className = "submit-status error";
+      return;
+    }
+    $("submit-btn").disabled = true;
+    $("player-name").disabled = true;
+    status.textContent = "Submitting…";
+    status.className = "submit-status";
+    const entry = { name, score: state.score, correct: state.correct };
+    try {
+      await api("", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(entry) });
+      state.submitted = true;
+      lastSubmitted = entry;
+      try {
+        localStorage.setItem(NAME_KEY, name);
+      } catch {
+        /* storage unavailable; ignore */
+      }
+      status.textContent = "Score submitted!";
+      status.className = "submit-status ok";
+      loadBoard();
+    } catch {
+      status.textContent = "Couldn't submit. Try again.";
+      status.className = "submit-status error";
+      $("submit-btn").disabled = false;
+      $("player-name").disabled = false;
+    }
+  }
+
+  if (boardEnabled) {
+    $("board").hidden = false;
+    $("submit-form").addEventListener("submit", submitScore);
+    loadBoard();
   }
 
   // ---------- wiring ----------

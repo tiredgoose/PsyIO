@@ -290,7 +290,9 @@
       ...options,
       headers: {
         apikey: cfg.supabaseAnonKey,
-        Authorization: `Bearer ${cfg.supabaseAnonKey}`,
+        // Legacy anon keys are JWTs and also go in Authorization; new
+        // sb_publishable_ keys are not JWTs and must only use the apikey header.
+        ...(cfg.supabaseAnonKey.startsWith("sb_") ? {} : { Authorization: `Bearer ${cfg.supabaseAnonKey}` }),
         "Content-Type": "application/json",
         ...(options.headers || {}),
       },

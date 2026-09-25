@@ -5,6 +5,6 @@
 // row-level security (see supabase/schema.sql) decides what it may do.
 // Leave them empty to run the game without a global scoreboard.
 window.PSYIO_CONFIG = {
-  supabaseUrl: "",      // e.g. "https://abcdefghijkl.supabase.co"
+  supabaseUrl: "https://iyxnamfegwteltepzszu.supabase.co",
   supabaseAnonKey: "sb_publishable_12bxlIyUwXNbl9hNKuR8zg_SJAK0Ed2", // publishable (public) key
 };
